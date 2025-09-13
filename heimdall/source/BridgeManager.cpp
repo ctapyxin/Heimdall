@@ -170,7 +170,8 @@ int BridgeManager::FindDeviceInterface(void)
 
 	for (int i = 0; i < configDescriptor->bNumInterfaces; i++)
 	{
-		for (int j = 0 ; j < configDescriptor->usb_interface[i].num_altsetting; j++)
+		int numAltSettings = configDescriptor->usb_interface[i].num_altsetting;
+		for (int j = 0 ; j < numAltSettings; j++)
 		{
 			if (verbose)
 			{
@@ -209,7 +210,9 @@ int BridgeManager::FindDeviceInterface(void)
 				&& outEndpointAddress != -1)
 			{
 				interfaceIndex = i;
-				altSettingIndex = j;
+				if (numAltSettings > 1)
+					altSettingIndex = j;
+
 				inEndpoint = inEndpointAddress;
 				outEndpoint = outEndpointAddress;
 			}
@@ -261,12 +264,19 @@ bool BridgeManager::SetupDeviceInterface(void)
 {
 	Interface::Print("Setting up interface...\n");
 
-	int result = libusb_set_interface_alt_setting(deviceHandle, interfaceIndex, altSettingIndex);
-
-	if (result != LIBUSB_SUCCESS)
+	if (altSettingIndex >= 0)
 	{
-		Interface::PrintError("Setting up interface failed!\n");
-		return (false);
+		int result = libusb_set_interface_alt_setting(deviceHandle, interfaceIndex, altSettingIndex);
+		if (result != LIBUSB_SUCCESS)
+		{
+			Interface::PrintError("Setting up interface failed!\n");
+			return (false);
+		}
+	}
+	else
+	{
+		Interface::Print("Only one alternate, so already set.\n");
+
 	}
 
 	Interface::Print("\n");
